@@ -1,7 +1,9 @@
-Require Import Recdef FunInd List Bool Lia.
+Require Import Recdef FunInd List Bool Lia Arith.
+
+From Equations Require Import Equations.
 
 Inductive B:=
-| B0 | B1 | B2 .
+| B0 | B1 | B2.
 
 Inductive A :=
 | N : (B*nat) -> (list A) -> A.
@@ -112,8 +114,115 @@ Function is_valid3 (t : A) {measure size} : bool :=
 (* Il y a 6 appels récursifs, donc 6 buts pour prouver que la mesure décroit,
   mais toutes ces preuves sont résolues automatiquement par la même tactique.
 *)
-all: destruct t as [[[ | | ] ?] [ | [[[ | | ] ?] ?] [ | [[[ | | ] ?] ?] [ | [[[ | | ] ?] ?]]]]]; simpl; try discriminate;
+all: destruct t as [[[ | | ] ?] [ | [[[ | | ] ?] ?]
+ [ | [[[ | | ] ?] ?] [ | [[[ | | ] ?] ?]]]]]; simpl; try discriminate;
 (intros t1 t2 ceq; injection ceq; intros ceq1 ceq2; rewrite <- ?ceq1, <- ?ceq2; simpl; lia).
 Defined.
 
+Equations is_valid5 (t : A) : bool by  wf (size t) lt :=
+  is_valid5 t with (is_valid_cases t) => {
+    | Case1 := true;
+    | (Case2 t1 t2) :=
+        b1 t && is_valid3 t1 && is_valid3 t2;
+    | (Case3 t1 t2) :=
+        b2 t && is_valid3 t1 && is_valid3 t2;
+    | (Case4 t1 t2) :=
+        b3 t && is_valid3 t1 && is_valid3 t2;
+    | _ :=  false
+    }.
 
+Scheme Equality for B.
+
+Fixpoint count (b : B) (t : A) :=
+  match t with
+    N (v,_) l =>
+    (if B_beq v b then 1 else 0) +
+    fold_right (fun x n => Nat.add (count b x) n) 0 l
+  end.
+
+
+Lemma andb_proj1 {b b' : bool} : b && b' = true -> b = true.
+Proof. destruct b as [ | ]; destruct b' as [ | ]; auto. Qed.
+
+Lemma andb_proj2 {b b' : bool} : b && b' = true -> b' = true.
+Proof. destruct b as [ | ]; destruct b' as [ | ]; auto. Qed.
+
+Lemma size_le1 {p l} : size (N p l) <= 1 -> l = nil.
+Proof.
+destruct l as [ | [ p' l'] tl]; auto; simpl; lia.
+Qed.
+
+Fixpoint at_path (t : A) (l : list nat) :=
+  match t, l with
+    t, nil => t
+  | N _ ltree, i::tl =>
+    if i <? length ltree then at_path (nth i ltree t) tl else t
+  end.
+
+Definition headB t := match t with N (b, _) _ => b end.
+
+Definition branches t := match t with N _ ts => ts end.
+
+Lemma at_path_empty b n l : at_path (N (b, n) nil) l = N (b, n) nil.
+Proof.
+induction l as [ | [ | k ] l]; auto.
+Qed.
+
+Lemma example_proof t : is_valid3 t = true ->
+  forall l, length (branches (at_path t l)) < 3.
+Proof.
+functional induction is_valid3 t; try discriminate.
+- destruct t as [[[ | | ] nh]
+          [ | [[[ | | ] n1] l1][ |[[[ | | ] n2] l2] [ | lh] ]]];
+    try discriminate; intros _ [ | [ | n] l]; simpl; 
+    rewrite ?at_path_empty; lia.
+- destruct t as [[[ | | ] nh]
+          [ | [[[ | | ] n1] l1][ |[[[ | | ] n2] l2] [ | lh] ]]];
+    simpl in e; try discriminate.
+  intros result.
+  assert (r1 := andb_proj2 (andb_proj1 result)).
+  assert (r2 := andb_proj2 result).
+  injection e as vt1 vt2; rewrite vt1, vt2.
+  intros [ | [ | [ | [ | k] ]] l]; simpl; auto.
+- destruct t as [[[ | | ] nh]
+          [ | [[[ | | ] n1] l1][ |[[[ | | ] n2] l2] [ | lh] ]]];
+    simpl in e; try discriminate.
+  intros result.
+  assert (r1 := andb_proj2 (andb_proj1 result)).
+  assert (r2 := andb_proj2 result).
+  injection e as vt1 vt2; rewrite vt1, vt2.
+  intros [ | [ | [ | [ | k] ]] l]; simpl; auto.
+- destruct t as [[[ | | ] nh]
+          [ | [[[ | | ] n1] l1][ |[[[ | | ] n2] l2] [ | lh] ]]];
+    simpl in e; try discriminate.
+  intros result.
+  assert (r1 := andb_proj2 (andb_proj1 result)).
+  assert (r2 := andb_proj2 result).
+  injection e as vt1 vt2; rewrite vt1, vt2.
+  intros [ | [ | [ | [ | k] ]] l]; simpl; auto.
+  intros result.
+  assert (r1 := andb_proj2 (andb_proj1 result)).
+  assert (r2 := andb_proj2 result).
+  injection e as vt1 vt2; rewrite vt1, vt2.
+  intros [ | [ | [ | [ | k] ]] l]; simpl; auto.
+Qed.
+
+Lemma example_proof5 t : is_valid5 t = true ->
+  forall l, length (branches (at_path t l)) < 3.
+Proof.
+funelim (is_valid5 t).
+- destruct t as [[[ | | ] nh]
+          [ | [[[ | | ] n1] l1][ |[[[ | | ] n2] l2] [ | lh] ]]];
+    try discriminate; intros _ [ | [ | n] l]; simpl; 
+    rewrite ?at_path_empty; lia.
+- destruct t as [[[ | | ] nh]
+          [ | [[[ | | ] n1] l1][ |[[[ | | ] n2] l2] [ | lh] ]]];
+    simpl in Heq; try discriminate.
+  intros result.
+  assert (r1 := andb_proj2 (andb_proj1 result)).
+  assert (r2 := andb_proj2 result).
+  injection Heq as vt1 vt2; rewrite vt1, vt2.
+  intros [ | [ | [ | [ | k] ]] l]; simpl; auto.
+
+-
+-
