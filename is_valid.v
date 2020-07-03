@@ -51,18 +51,6 @@ all: destruct t as [[[ | | ] ?] [ | [[[ | | ] ?] ?]
 (intros t1 t2 ceq; injection ceq; intros ceq1 ceq2; rewrite <- ?ceq1, <- ?ceq2; simpl; lia).
 Defined.
 
-Equations is_valid5 (t : A) : bool by  wf (size t) lt :=
-  is_valid5 t with (is_valid_cases t) => {
-    | Case1 := true;
-    | (Case2 t1 t2) :=
-        b1 t && is_valid3 t1 && is_valid3 t2;
-    | (Case3 t1 t2) :=
-        b2 t && is_valid3 t1 && is_valid3 t2;
-    | (Case4 t1 t2) :=
-        b3 t && is_valid3 t1 && is_valid3 t2;
-    | _ :=  false
-    }.
-
 Scheme Equality for B.
 
 Lemma andb_proj1 {b b' : bool} : b && b' = true -> b = true.
@@ -128,24 +116,6 @@ functional induction is_valid3 t; try discriminate.
   injection e as vt1 vt2; rewrite vt1, vt2.
   intros [ | [ | [ | [ | k] ]] l]; simpl; auto.
 Qed.
-
-Lemma example_proof5 t : is_valid5 t = true ->
-  forall l, length (branches (at_path t l)) < 3.
-Proof.
-funelim (is_valid5 t).
-- destruct t as [[[ | | ] nh]
-          [ | [[[ | | ] n1] l1][ |[[[ | | ] n2] l2] [ | lh] ]]];
-    try discriminate; intros _ [ | [ | n] l]; simpl; 
-    rewrite ?at_path_empty; lia.
-- destruct t as [[[ | | ] nh]
-          [ | [[[ | | ] n1] l1][ |[[[ | | ] n2] l2] [ | lh] ]]];
-    simpl in Heq; try discriminate.
-  intros result.
-  assert (r1 := andb_proj2 (andb_proj1 result)).
-  assert (r2 := andb_proj2 result).
-  injection Heq as vt1 vt2; rewrite vt1, vt2.
-  intros [ | [ | [ | [ | k] ]] l]; simpl; auto.
-Abort.
 
 Equations is_valid6 (t : A) : bool by  wf (size t) lt :=
   is_valid6 t with (exist (fun v => is_valid_cases t = v)
@@ -229,4 +199,37 @@ funelim (is_valid6 t).
   intros [ | [ | [ | [ | k] ]] l]; simpl; auto.
 - intros; discriminate.
 Qed.
+
+(*
+Equations is_valid7 (t : A) : bool by  wf (size t) lt :=
+  is_valid7 t with (is_valid_cases t) => {
+    | Case1 := true;
+    | (Case2 t1 t2) :=
+        b1 t && is_valid7 t1 && is_valid7 t2;
+    | (Case3 t1 t2) :=
+        b2 t && is_valid7 t1 && is_valid7 t2;
+    | (Case4 t1 t2) :=
+        b3 t && is_valid7 t1 && is_valid7 t2;
+    | _ :=  false
+  }.
+Next Obligation.
+(* The goal that is displayed cannot be proved.
+  b1, b2, b3 : A -> bool
+  t, t1, t2 : A
+  is_valid7 : forall x : A, size x < size t -> bool
+  ============================
+  size t1 < size t *)
+Abort. *)
+
+Lemma show_unprovability_first_obligation_is_valid7 :
+   (forall (t t1 t2 : A),
+       (forall x, size x < size t -> bool) -> size t1 < size t) -> False.
+Proof.
+intros abs.
+set (t := N (B0, 0) nil).
+set (f := fun (x : A) (h : size x < size t) => false).
+assert (tmp:= abs t t t f); lia.
+Qed.
+
+End some_context.
 
