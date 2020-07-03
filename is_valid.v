@@ -8,7 +8,6 @@ Inductive B:=
 Inductive A :=
 | N : (B*nat) -> (list A) -> A.
 
-
 Section some_context.
 
 Variables b1 b2 b3 : A -> bool.
@@ -217,7 +216,7 @@ Next Obligation.
   b1, b2, b3 : A -> bool
   t, t1, t2 : A
   is_valid7 : forall x : A, size x < size t -> bool
-  ============================
+  --------------------------
   size t1 < size t *)
 Abort. *)
 
@@ -232,4 +231,3 @@ assert (tmp:= abs t t t f); lia.
 Qed.
 
 End some_context.
-
